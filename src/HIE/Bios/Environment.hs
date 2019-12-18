@@ -137,7 +137,15 @@ addCmdOpts cmdOpts df1 = do
 #endif
           cur_dir = '.' : [pathSeparator]
           nfp = normalise fp
-    normal_fileish_paths = map (normalise_hyp . G.unLoc) leftovers
+
+    processPaths = snd . foldr processPath (False, [])
+      where processPath p (inRTS, paths) =
+              case (inRTS, G.unLoc p) of
+                (_, "+RTS") -> (False, paths)
+                (_, "-RTS") -> (True, paths)
+                (True, _)   -> (inRTS, paths)
+                (_, p')     -> (False, normalise_hyp p' : paths)
+    normal_fileish_paths = processPaths leftovers
   let
    (srcs, objs) = partition_args normal_fileish_paths [] []
    df3 = df2 { ldInputs = map (FileOption "") objs ++ ldInputs df2 }
